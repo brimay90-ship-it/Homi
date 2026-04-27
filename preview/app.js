@@ -465,6 +465,30 @@ function toggleChore(id) {
 }
 
 // ========== MEALS ==========
+const MEAL_ICONS = {
+    'pancake': '🥞', 'waffle': '🧇', 'egg': '🍳', 'toast': '🍞', 'cereal': '🥣',
+    'bacon': '🥓', 'sausage': '🌭', 'taco': '🌮', 'pizza': '🍕', 'burger': '🍔',
+    'sandwich': '🥪', 'wrap': '🌯', 'salad': '🥗', 'soup': '🥣', 'pasta': '🍝',
+    'spaghetti': '🍝', 'noodle': '🍜', 'ramen': '🍜', 'sushi': '🍣', 'fish': '🐟',
+    'chicken': '🍗', 'steak': '🥩', 'beef': '🥩', 'pork': '🍖', 'bbq': '🍖',
+    'curry': '🍛', 'stew': '🍲', 'rice': '🍚', 'burrito': '🌯', 'hot dog': '🌭',
+    'fries': '🍟', 'cheese': '🧀', 'bread': '🍞', 'bagel': '🥯', 'croissant': '🥐',
+    'apple': '🍎', 'banana': '🍌', 'grape': '🍇', 'strawberry': '🍓', 'melon': '🍉',
+    'carrot': '🥕', 'broccoli': '🥦', 'tomato': '🍅', 'corn': '🌽', 'smoothie': '🥤',
+    'yogurt': '🍦', 'ice cream': '🍨', 'cookie': '🍪', 'cake': '🍰', 'pie': '🥧',
+    'chocolate': '🍫', 'candy': '🍬', 'nut': '🥜', 'trail mix': '🥜', 'pretzel': '🥨',
+    'hummus': '🧆', 'falafel': '🧆', 'leftover': '🥡', 'stir fry': '🥘',
+};
+
+function getMealIcon(mealName, defaultIcon) {
+    if (!mealName) return defaultIcon;
+    const lower = mealName.toLowerCase();
+    for (const [key, icon] of Object.entries(MEAL_ICONS)) {
+        if (lower.includes(key)) return icon;
+    }
+    return defaultIcon;
+}
+
 function renderMeals() {
     const ws = getWeekStart(calDate);
     const we = new Date(ws); we.setDate(we.getDate() + 6);
@@ -498,8 +522,10 @@ function renderMeals() {
             const val = dayMeals[t.key] || '';
             const dow = d.getDay();
             const dayLabel = d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+            const displayIcon = getMealIcon(val, t.icon);
+            
             html += `<div class="meal-slot ${val ? 'filled' : ''}" onclick="openModal('meal',{dow:${dow},slot:'${t.key}',currentMeal:'${val.replace(/'/g,"\\'")}',dayLabel:'${dayLabel}'})">
-                <div class="meal-slot-icon">${t.icon}</div>
+                <div class="meal-slot-icon">${displayIcon}</div>
                 <div class="meal-slot-type">${t.label}</div>
                 ${val ? `<div class="meal-slot-name">${val}</div>` : '<div class="meal-slot-empty">Add meal</div>'}
             </div>`;
