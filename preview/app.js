@@ -431,6 +431,20 @@ function renderChores() {
     list.innerHTML = html;
 }
 
+function clearCompletedGrocery() {
+    const originalCount = GROCERY.length;
+    for (let i = GROCERY.length - 1; i >= 0; i--) {
+        if (GROCERY[i].done) {
+            GROCERY.splice(i, 1);
+        }
+    }
+    const removed = originalCount - GROCERY.length;
+    if (removed > 0) {
+        showNotification(`✨ Cleared ${removed} completed items.`);
+        renderGrocery();
+    }
+}
+
 function toggleChore(id) {
     const c = CHORES.find(ch => ch.id === id);
     if (c) { c.done = !c.done; renderChores(); }
@@ -483,11 +497,65 @@ function renderMeals() {
     document.getElementById('mealNext').onclick = () => { calDate.setDate(calDate.getDate()+7); renderMeals(); };
 }
 
+function generateShoppingList() {
+    const ws = getWeekStart(calDate);
+    const available = getAvailableIngredients();
+    let addedCount = 0;
+    
+    // Check all 7 days of the current week
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(ws); d.setDate(d.getDate() + i);
+        const dayMeals = MEALS[d.getDay()] || {};
+        
+        ['breakfast', 'lunch', 'dinner'].forEach(slot => {
+            const mealName = dayMeals[slot];
+            if (!mealName) return;
+            
+            const recipe = RECIPES.find(r => r.name === mealName);
+            if (recipe) {
+                const missing = recipe.ingredients.filter(ing => 
+                    !available.some(a => a.includes(ing.toLowerCase()) || ing.toLowerCase().includes(a))
+                );
+                
+                if (missing.length > 0) {
+                    addMissingToGrocery(missing);
+                    addedCount += missing.length;
+                    // Update available list so we don't add the same thing twice for different meals
+                    missing.forEach(m => available.push(m.toLowerCase()));
+                }
+            }
+        });
+    }
+    
+    if (addedCount > 0) {
+        showNotification(`🛒 Success! Added ${addedCount} items to your grocery list.`);
+        renderGrocery();
+    } else {
+        showNotification(`✅ All set! You have everything you need for this week.`);
+    }
+}
+
 // ========== GROCERY ==========
-function renderGrocery() {
+// ========== GROCERY ==========
+// ========== GROCERY ==========
+const PRODUCT_IMAGES = {
+    'Chobani': 'https://www.chobani.com/content/dam/chobani/products/yogurt/greek-yogurt/plain/non-fat/0818290011550_C1.png',
+    'Tropicana': 'https://m.media-amazon.com/images/I/71X8k8yS7eL._SL1500_.jpg',
+    'Oatly': 'https://m.media-amazon.com/images/I/61kMizP+T6L._SL1500_.jpg',
+    'Land O Lakes': 'https://m.media-amazon.com/images/I/81xU9R9Tf2L._SL1500_.jpg',
+    'Kelloggs': 'https://m.media-amazon.com/images/I/81q2K9S6F9L._SL1500_.jpg'
+};
+
+function renderGrocery(query = '') {
     const list = document.getElementById('groceryList');
+    const q = query.toLowerCase().trim();
+    const clearBtn = document.getElementById('clearGrocerySearch');
+    
+    if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+    
     const cats = {};
     GROCERY.filter(g => !g.done).forEach(g => {
+        if (q && !g.name.toLowerCase().includes(q)) return;
         if (!cats[g.category]) cats[g.category] = { icon: g.icon, items: [] };
         cats[g.category].items.push(g);
     });
@@ -502,9 +570,18 @@ function renderGrocery() {
             </div>`;
         data.items.forEach((item, idx) => {
             const m = FAMILY[item.who];
-            html += `<div class="grocery-item fade-in">
-                <div class="grocery-check" onclick="toggleGrocery(this, '${cat}', ${idx})"></div>
-                <span class="grocery-name">${item.name}</span>
+            const brandHtml = item.brand ? `<span class="grocery-brand">${item.brand}</span>` : '';
+            const qtyHtml = item.qty ? `<span class="grocery-qty">${item.qty}</span>` : '';
+            const imgUrl = PRODUCT_IMAGES[item.brand];
+            const imgHtml = imgUrl ? `<div class="grocery-product-img"><img src="${imgUrl}" alt="${item.brand}"></div>` : '';
+            
+            html += `<div class="grocery-item fade-in" onclick="openModal('grocery', {editIdx: ${GROCERY.indexOf(item)}})">
+                <div class="grocery-check" onclick="event.stopPropagation(); toggleGroceryItem(${GROCERY.indexOf(item)}, '${q.replace(/'/g,"\\'")}')"></div>
+                ${imgHtml}
+                <div class="grocery-item-details">
+                    <span class="grocery-name">${item.name}</span>
+                    <div class="grocery-meta">${brandHtml}${brandHtml && qtyHtml ? ' • ' : ''}${qtyHtml}</div>
+                </div>
                 <span class="grocery-who">${m ? m.emoji : ''}</span>
             </div>`;
         });
@@ -512,39 +589,63 @@ function renderGrocery() {
     });
 
     // Done section
-    const done = GROCERY.filter(g => g.done);
+    const done = GROCERY.filter(g => g.done).filter(g => !q || g.name.toLowerCase().includes(q));
     if (done.length) {
         html += `<div class="grocery-category" style="opacity:0.6">
-            <div class="grocery-cat-header">Completed <span class="grocery-cat-count">${done.length}</span></div>`;
+            <div class="grocery-cat-header" style="justify-content: space-between; width: 100%;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>Completed</span>
+                    <span class="grocery-cat-count">${done.length}</span>
+                </div>
+                <button class="btn-text" onclick="clearCompletedGrocery()" style="color:var(--primary); font-size:10px;">Clear All</button>
+            </div>`;
         done.forEach(item => {
             const m = FAMILY[item.who];
-            html += `<div class="grocery-item">
-                <div class="grocery-check done">✓</div>
-                <span class="grocery-name done">${item.name}</span>
+            html += `<div class="grocery-item" onclick="openModal('grocery', {editIdx: ${GROCERY.indexOf(item)}})">
+                <div class="grocery-check done" onclick="event.stopPropagation(); toggleGroceryItem(${GROCERY.indexOf(item)}, '${q.replace(/'/g,"\\'")}')">✓</div>
+                <div class="grocery-item-details">
+                    <span class="grocery-name done">${item.name}</span>
+                    ${item.brand ? `<div class="grocery-meta">${item.brand}</div>` : ''}
+                </div>
                 <span class="grocery-who">${m ? m.emoji : ''}</span>
             </div>`;
         });
         html += '</div>';
     }
 
+    if (!html && q) {
+        html = `<div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+            <div style="font-size:32px; margin-bottom:12px;">🔍</div>
+            <div style="font-size:14px; font-weight:500;">No items found matching "${query}"</div>
+            <button class="btn-secondary" style="margin-top:16px; padding:8px 20px;" onclick="openModal('grocery', {prefill: '${query.replace(/'/g,"\\'")}'})">
+                + Add "${query}"
+            </button>
+        </div>`;
+    }
+
     list.innerHTML = html;
 
-    document.getElementById('addGroceryBtn').onclick = () => {
-        const input = document.getElementById('groceryInput');
-        if (input.value.trim()) {
-            GROCERY.push({ name:input.value.trim(), category:'Other', icon:'🛒', done:false, who:0 });
-            input.value = '';
-            renderGrocery();
-        }
+    const input = document.getElementById('groceryInput');
+    input.oninput = (e) => {
+        renderGrocery(e.target.value);
     };
-    document.getElementById('groceryInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') document.getElementById('addGroceryBtn').click();
-    });
 }
 
-function toggleGrocery(el, cat, idx) {
-    const items = GROCERY.filter(g => !g.done && g.category === cat);
-    if (items[idx]) { items[idx].done = true; renderGrocery(); }
+function clearSearch(tab) {
+    if (tab === 'grocery') {
+        const input = document.getElementById('groceryInput');
+        input.value = '';
+        renderGrocery('');
+        input.focus();
+    }
+}
+
+function toggleGroceryItem(globalIdx, query = '') {
+    const item = GROCERY[globalIdx];
+    if (item) {
+        item.done = !item.done;
+        renderGrocery(query);
+    }
 }
 
 // ========== HELPERS ==========
@@ -561,6 +662,23 @@ function fmtHour(h) {
     const ampm = hr >= 12 ? 'PM' : 'AM';
     const hr12 = hr % 12 || 12;
     return min > 0 ? `${hr12}:${String(Math.round(min)).padStart(2,'0')} ${ampm}` : `${hr12} ${ampm}`;
+}
+
+// ========== NOTIFICATIONS ==========
+function showNotification(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast fade-in';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
 }
 
 // ========== ORIENTATION ==========
@@ -607,10 +725,20 @@ function openModal(type, extra) {
         body.innerHTML = renderMealForm(extra);
         save.onclick = saveMeal;
     } else if (type === 'grocery') {
-        title.textContent = 'Add Grocery Item';
-        save.textContent = 'Add Item';
-        body.innerHTML = renderGroceryForm();
+        const isEdit = extra?.editIdx !== undefined;
+        title.textContent = isEdit ? 'Edit Grocery Item' : 'Add Grocery Item';
+        save.textContent = isEdit ? 'Save Changes' : 'Add Item';
+        body.innerHTML = renderGroceryForm(extra?.prefill, extra?.editIdx);
         save.onclick = saveGroceryItem;
+        
+        if (isEdit) {
+            document.querySelector('.modal-cancel').innerHTML = '<span style="color:var(--danger)">Delete Item</span>';
+            document.querySelector('.modal-cancel').onclick = () => {
+                GROCERY.splice(extra.editIdx, 1);
+                closeModal();
+                renderGrocery();
+            };
+        }
     }
 
     document.querySelector('.modal-cancel').style.display = 'block';
@@ -621,7 +749,11 @@ function openModal(type, extra) {
 
 function closeModal() {
     document.getElementById('modalOverlay').classList.remove('active');
-    document.querySelector('.modal-cancel').style.display = 'block';
+    const cancelBtn = document.querySelector('.modal-cancel');
+    cancelBtn.style.display = 'block';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.color = '';
+    cancelBtn.onclick = closeModal;
     
     const saveBtn = document.getElementById('modalSave');
     saveBtn.style.display = 'block';
@@ -1124,25 +1256,83 @@ const GROCERY_CATS = [
     { name:'Other', icon:'🛒' },
 ];
 
-function renderGroceryForm() {
-    const cats = GROCERY_CATS.map((c,i) =>
-        `<div class="cat-option ${i===0?'selected':''}" data-cat="${c.name}" data-icon="${c.icon}" onclick="selectCat(this)">
+const GROCERY_AUTO_MAP = {
+    // Produce
+    'apple':'Produce', 'banana':'Produce', 'orange':'Produce', 'grape':'Produce', 'strawberry':'Produce', 'blueberry':'Produce', 'raspberry':'Produce', 'blackberry':'Produce', 'melon':'Produce', 'watermelon':'Produce', 'pineapple':'Produce', 'mango':'Produce', 'peach':'Produce', 'pear':'Produce', 'plum':'Produce', 'kiwi':'Produce', 'lemon':'Produce', 'lime':'Produce', 'avocado':'Produce', 'tomato':'Produce', 'lettuce':'Produce', 'spinach':'Produce', 'kale':'Produce', 'broccoli':'Produce', 'cauliflower':'Produce', 'carrot':'Produce', 'potato':'Produce', 'onion':'Produce', 'garlic':'Produce', 'cucumber':'Produce', 'pepper':'Produce', 'celery':'Produce', 'asparagus':'Produce', 'zucchini':'Produce', 'mushroom':'Produce', 'corn':'Produce', 'cabbage':'Produce', 'eggplant':'Produce', 'radish':'Produce', 'potato':'Produce', 'sweet potato':'Produce', 'yam':'Produce', 'ginger':'Produce', 'herb':'Produce', 'cilantro':'Produce', 'parsley':'Produce', 'basil':'Produce',
+    // Dairy
+    'milk':'Dairy', 'cheese':'Dairy', 'yogurt':'Dairy', 'butter':'Dairy', 'cream':'Dairy', 'sour cream':'Dairy', 'cottage cheese':'Dairy', 'egg':'Dairy', 'margarine':'Dairy', 'almond milk':'Dairy', 'soy milk':'Dairy', 'oat milk':'Dairy', 'kefir':'Dairy',
+    // Meat
+    'chicken':'Meat', 'beef':'Meat', 'pork':'Meat', 'turkey':'Meat', 'steak':'Meat', 'ground beef':'Meat', 'bacon':'Meat', 'sausage':'Meat', 'ham':'Meat', 'salmon':'Meat', 'shrimp':'Meat', 'fish':'Meat', 'tuna':'Meat', 'lamb':'Meat', 'duck':'Meat', 'salami':'Meat', 'pepperoni':'Meat', 'cod':'Meat', 'tilapia':'Meat',
+    // Bakery
+    'bread':'Bakery', 'bagel':'Bakery', 'muffin':'Bakery', 'croissant':'Bakery', 'tortilla':'Bakery', 'pita':'Bakery', 'bun':'Bakery', 'roll':'Bakery', 'baguette':'Bakery', 'cake':'Bakery', 'cookie':'Bakery', 'pie':'Bakery', 'donut':'Bakery', 'pastry':'Bakery',
+    // Pantry
+    'pasta':'Pantry', 'rice':'Pantry', 'flour':'Pantry', 'sugar':'Pantry', 'oil':'Pantry', 'olive oil':'Pantry', 'vinegar':'Pantry', 'salt':'Pantry', 'pepper':'Pantry', 'spice':'Pantry', 'sauce':'Pantry', 'tomato sauce':'Pantry', 'ketchup':'Pantry', 'mustard':'Pantry', 'mayo':'Pantry', 'honey':'Pantry', 'syrup':'Pantry', 'jam':'Pantry', 'jelly':'Pantry', 'peanut butter':'Pantry', 'cereal':'Pantry', 'oats':'Pantry', 'quinoa':'Pantry', 'bean':'Pantry', 'lentil':'Pantry', 'chickpea':'Pantry', 'soup':'Pantry', 'broth':'Pantry', 'tuna can':'Pantry', 'coffee':'Pantry', 'tea':'Pantry', 'baking powder':'Pantry', 'baking soda':'Pantry', 'vanilla':'Pantry',
+    // Beverages
+    'water':'Beverages', 'juice':'Beverages', 'soda':'Beverages', 'pop':'Beverages', 'coke':'Beverages', 'beer':'Beverages', 'wine':'Beverages', 'spirits':'Beverages', 'energy drink':'Beverages', 'sports drink':'Beverages', 'tea':'Beverages', 'coffee':'Beverages', 'sparkling water':'Beverages',
+    // Frozen
+    'ice cream':'Frozen', 'frozen pizza':'Frozen', 'frozen vegetable':'Frozen', 'frozen fruit':'Frozen', 'pizza':'Frozen', 'nugget':'Frozen', 'frozen meal':'Frozen', 'waffle':'Frozen', 'ice':'Frozen', 'sorbet':'Frozen',
+    // Snacks
+    'chip':'Snacks', 'cracker':'Snacks', 'nut':'Snacks', 'popcorn':'Snacks', 'pretzel':'Snacks', 'candy':'Snacks', 'chocolate':'Snacks', 'granola bar':'Snacks', 'trail mix':'Snacks', 'beef jerky':'Snacks', 'gum':'Snacks',
+};
+
+function renderGroceryForm(prefill = '', editIdx = undefined) {
+    const item = editIdx !== undefined ? GROCERY[editIdx] : null;
+    const itemName = item ? item.name : prefill;
+    const itemBrand = item ? (item.brand || '') : '';
+    const itemQty = item ? (item.qty || '') : '';
+    const itemWho = item ? item.who : 0;
+    const itemCat = item ? item.category : 'Other';
+
+    const cats = GROCERY_CATS.map((c,i) => {
+        const selected = item ? (c.name === itemCat) : (i === 0);
+        return `<div class="cat-option ${selected?'selected':''}" data-cat="${c.name}" data-icon="${c.icon}" onclick="selectCat(this)">
             <span class="cat-emoji">${c.icon}</span>
             <span>${c.name}</span>
-        </div>`
-    ).join('');
+        </div>`;
+    }).join('');
 
     const members = FAMILY.map((m,i) =>
-        `<div class="form-chip ${i===0?'selected':''}" data-who="${i}" onclick="selectFreq(this)">
+        `<div class="form-chip ${i===itemWho?'selected':''}" data-who="${i}" onclick="selectFreq(this)">
             ${m.emoji} ${m.name}
         </div>`
     ).join('');
 
+    setTimeout(() => {
+        const nameInput = document.getElementById('gr-name');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase().trim();
+                let foundCat = 'Other';
+                for (const [key, cat] of Object.entries(GROCERY_AUTO_MAP)) {
+                    if (val.includes(key)) {
+                        foundCat = cat;
+                        break;
+                    }
+                }
+                if (foundCat !== 'Other') {
+                    const options = document.querySelectorAll('#gr-cats .cat-option');
+                    options.forEach(opt => {
+                        if (opt.dataset.cat === foundCat) {
+                            selectCat(opt);
+                        }
+                    });
+                }
+            });
+            // Trigger immediately if prefilled
+            if (prefill) {
+                nameInput.dispatchEvent(new Event('input'));
+            }
+        }
+    }, 100);
+
     return `
         <div class="form-section">
             <span class="form-section-label">Item Details</span>
-            <input class="form-input" id="gr-name" placeholder="Item name" autofocus>
-            <input class="form-input" id="gr-qty" placeholder="Quantity (optional, e.g. 2 lbs)">
+            <input class="form-input" id="gr-name" placeholder="Item name" value="${itemName.replace(/"/g, '&quot;')}" autofocus>
+            <div style="display:flex; gap:8px;">
+                <input class="form-input" id="gr-brand" placeholder="Brand (optional)" value="${itemBrand.replace(/"/g, '&quot;')}" style="flex:1">
+                <input class="form-input" id="gr-qty" placeholder="Qty (optional)" value="${itemQty.replace(/"/g, '&quot;')}" style="flex:0.6">
+            </div>
         </div>
         <div class="form-section">
             <span class="form-section-label">Category</span>
@@ -1164,13 +1354,28 @@ function saveGroceryItem() {
     const name = document.getElementById('gr-name').value.trim();
     if (!name) { document.getElementById('gr-name').focus(); return; }
 
+    const brand = document.getElementById('gr-brand').value.trim();
+    const qty = document.getElementById('gr-qty').value.trim();
     const catEl = document.querySelector('#gr-cats .cat-option.selected');
     const whoEl = document.querySelector('#gr-who .form-chip.selected');
     const category = catEl?.dataset.cat || 'Other';
     const icon = catEl?.dataset.icon || '🛒';
     const who = parseInt(whoEl?.dataset.who || '0');
 
-    GROCERY.push({ name, category, icon, done: false, who });
+    if (modalState.editIdx !== undefined) {
+        // Update existing
+        const item = GROCERY[modalState.editIdx];
+        item.name = name;
+        item.brand = brand;
+        item.qty = qty;
+        item.category = category;
+        item.icon = icon;
+        item.who = who;
+    } else {
+        // Add new
+        GROCERY.push({ name, brand, qty, category, icon, done: false, who });
+    }
+    
     closeModal();
     renderGrocery();
 }

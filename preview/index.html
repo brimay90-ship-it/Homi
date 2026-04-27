@@ -131,20 +131,25 @@
 
                         <!-- Meals Tab -->
                         <div class="tab-content" id="tab-meals">
-                            <div class="meals-nav">
-                                <button class="btn-nav" id="mealPrev">‹</button>
-                                <span class="meals-range" id="mealsRange"></span>
-                                <button class="btn-nav" id="mealNext">›</button>
+                            <div class="meals-toolbar">
+                                <div class="meals-nav">
+                                    <button class="btn-nav" id="mealPrev">‹</button>
+                                    <span class="meals-range" id="mealsRange"></span>
+                                    <button class="btn-nav" id="mealNext">›</button>
+                                </div>
+                                <button class="btn-secondary" onclick="generateShoppingList()">🛒 Sync Shopping List</button>
                             </div>
                             <div class="meals-grid" id="mealsGrid"></div>
                         </div>
 
                         <!-- Grocery Tab -->
                         <div class="tab-content" id="tab-grocery">
-                            <div class="grocery-add">
-                                <button class="cat-btn" id="catBtn" onclick="openModal('grocery')">🥬</button>
-                                <input type="text" placeholder="Add an item..." id="groceryInput">
-                                <button class="add-btn" id="addGroceryBtn">+</button>
+                            <div class="grocery-toolbar">
+                                <div class="grocery-search-wrapper">
+                                    <input type="text" placeholder="Search or add an item..." id="groceryInput">
+                                    <button class="clear-search" id="clearGrocerySearch" onclick="clearSearch('grocery')">×</button>
+                                </div>
+                                <button class="add-btn" id="addGroceryBtn" onclick="openModal('grocery')">+</button>
                             </div>
                             <div class="grocery-list" id="groceryList"></div>
                         </div>
