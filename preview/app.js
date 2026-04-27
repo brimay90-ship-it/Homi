@@ -321,7 +321,22 @@ function renderMonthGrid() {
 function renderWeekView() {
     const ws = getWeekStart(calDate);
     const today = new Date();
-    
+
+    // --- Fixed header row (outside scroll) ---
+    let headerHtml = '<div class="week-header-row"><div class="week-time-spacer"></div>';
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(ws); d.setDate(d.getDate() + i);
+        const isToday = d.toDateString() === today.toDateString();
+        const dayName = d.toLocaleDateString('en-US', { weekday:'short' }).toUpperCase();
+        const dayNum = d.getDate();
+        headerHtml += `<div class="week-header-cell${isToday ? ' today' : ''}">
+            <span class="week-header-day">${dayName}</span>
+            <span class="week-header-num${isToday ? ' today-circle' : ''}">${dayNum}</span>
+        </div>`;
+    }
+    headerHtml += '</div>';
+
+    // --- Scrollable time body ---
     let timeLabelsHtml = '<div class="time-labels">';
     for (let h = 7; h <= 22; h++) {
         const label = h > 12 ? (h - 12) + ' PM' : (h === 12 ? '12 PM' : h + ' AM');
@@ -329,47 +344,46 @@ function renderWeekView() {
     }
     timeLabelsHtml += '</div>';
 
-    let html = `<div class="time-grid-container">${timeLabelsHtml}<div class="week-grid">`;
-
+    let colsHtml = '<div class="week-cols">';
     for (let i = 0; i < 7; i++) {
         const d = new Date(ws); d.setDate(d.getDate() + i);
-        const isToday = d.toDateString() === today.toDateString();
-        const dayName = d.toLocaleDateString('en-US', { weekday:'short' });
-        const dayNum = d.getDate();
         const dayEvents = SAMPLE_EVENTS.map((e, idx) => ({ ...e, originalIndex: idx })).filter(e => e.day === d.getDay());
 
-        html += `<div class="week-col">
-            <div class="week-day-header ${isToday ? 'today' : ''}">
-                <div class="day-label">${dayName}</div>
-                <div class="day-number">${dayNum}</div>
-            </div>
-            <div class="week-events-grid">`;
-
-        // Render events
+        colsHtml += '<div class="week-events-col">';
         dayEvents.forEach(e => {
             const startH = Math.max(7, e.start);
             const endH = Math.min(23, e.end);
             if (endH <= 7 || startH >= 23) return;
-
-            const top = (startH - 7) * 45; // 45px per hour
-            const height = Math.max(15, (endH - startH) * 45);
-            
-            html += `<div class="week-event-abs" style="background:${e.color}; top:${top}px; height:${height}px;" onclick="event.stopPropagation(); showEventDetail(${e.originalIndex})">
+            const top = (startH - 7) * 45;
+            const height = Math.max(20, (endH - startH) * 45);
+            colsHtml += `<div class="week-event-abs" style="background:${e.color}; top:${top}px; height:${height}px;" onclick="event.stopPropagation(); showEventDetail(${e.originalIndex})">
                 <div class="evt-title">${e.title}</div>
                 <div class="evt-time">${fmtHour(e.start)}</div>
             </div>`;
         });
-
-        html += '</div></div>';
+        colsHtml += '</div>';
     }
+    colsHtml += '</div>';
 
-    html += '</div></div>';
-    return html;
+    return `<div class="week-view-wrapper">${headerHtml}<div class="time-grid-container">${timeLabelsHtml}<div class="week-body-cols">${colsHtml}</div></div></div>`;
 }
 
 function renderDayView() {
     const dow = calDate.getDay();
     const dayEvents = SAMPLE_EVENTS.map((e, idx) => ({ ...e, originalIndex: idx })).filter(e => e.day === dow);
+    const today = new Date();
+    const isToday = calDate.toDateString() === today.toDateString();
+    const dayName = calDate.toLocaleDateString('en-US', { weekday: 'long' });
+    const dayNum = calDate.getDate();
+
+    // Fixed header row
+    const headerHtml = `<div class="day-header-row">
+        <div class="week-time-spacer"></div>
+        <div class="day-header-cell${isToday ? ' today' : ''}">
+            <span class="week-header-day">${dayName.toUpperCase()}</span>
+            <span class="week-header-num${isToday ? ' today-circle' : ''}">${dayNum}</span>
+        </div>
+    </div>`;
 
     let timeLabelsHtml = '<div class="time-labels">';
     for (let h = 7; h <= 22; h++) {
@@ -378,25 +392,22 @@ function renderDayView() {
     }
     timeLabelsHtml += '</div>';
 
-    let html = `<div class="time-grid-container">${timeLabelsHtml}<div class="day-grid-abs">`;
-
+    let eventsHtml = '<div class="day-grid-abs">';
     dayEvents.forEach(e => {
         const startH = Math.max(7, e.start);
         const endH = Math.min(23, e.end);
         if (endH <= 7 || startH >= 23) return;
-
         const top = (startH - 7) * 45;
-        const height = Math.max(15, (endH - startH) * 45);
-        
+        const height = Math.max(20, (endH - startH) * 45);
         const locationText = e.location ? `<span style="margin-left:6px; opacity:0.8;">📍 ${e.location}</span>` : '';
-        html += `<div class="day-event-abs fade-in" style="background:${e.color}15; border-left: 4px solid ${e.color}; top:${top}px; height:${height}px;" onclick="event.stopPropagation(); showEventDetail(${e.originalIndex})">
+        eventsHtml += `<div class="day-event-abs fade-in" style="background:${e.color}15; border-left: 4px solid ${e.color}; top:${top}px; height:${height}px;" onclick="event.stopPropagation(); showEventDetail(${e.originalIndex})">
             <div class="evt-title" style="color:${e.color}">${e.title}</div>
             <div class="evt-time" style="color:var(--text-secondary)">${fmtHour(e.start)} – ${fmtHour(e.end)} ${locationText}</div>
         </div>`;
     });
+    eventsHtml += '</div>';
 
-    html += '</div></div>';
-    return html;
+    return `<div class="week-view-wrapper">${headerHtml}<div class="time-grid-container">${timeLabelsHtml}${eventsHtml}</div></div>`;
 }
 
 // ========== CHORES ==========
