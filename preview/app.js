@@ -1158,6 +1158,23 @@ const RECIPES = [
     { name:'Salmon', slot:'dinner', ingredients:['Salmon','Rice','Asparagus','Lemon','Olive oil'], icon:'🐟' },
     { name:'BBQ', slot:'dinner', ingredients:['Chicken breast','BBQ sauce','Corn','Bread'], icon:'🍖' },
     { name:'Curry', slot:'dinner', ingredients:['Chicken breast','Rice','Coconut milk','Curry paste','Onion'], icon:'🍛' },
+
+    // Snacks (shared by snack1 and snack2)
+    { name:'Apple slices', slot:'snack', ingredients:['Apples'], icon:'🍎' },
+    { name:'Carrot sticks', slot:'snack', ingredients:['Carrots'], icon:'🥕' },
+    { name:'Yogurt & Berries', slot:'snack', ingredients:['Yogurt','Berries'], icon:'🍦' },
+    { name:'Cheese & Crackers', slot:'snack', ingredients:['Cheese','Crackers'], icon:'🧀' },
+    { name:'Hummus & Veggies', slot:'snack', ingredients:['Hummus','Carrots','Celery'], icon:'🧆' },
+    { name:'Trail Mix', slot:'snack', ingredients:['Nuts','Granola'], icon:'🥜' },
+    { name:'Peanut Butter & Banana', slot:'snack', ingredients:['Peanut butter','Bananas'], icon:'🍌' },
+    { name:'Smoothie', slot:'snack', ingredients:['Bananas','Milk','Yogurt','Berries'], icon:'🥤' },
+    { name:'Granola Bar', slot:'snack', ingredients:['Granola'], icon:'🍪' },
+    { name:'String Cheese', slot:'snack', ingredients:['Cheese'], icon:'🧀' },
+    { name:'Pretzels', slot:'snack', ingredients:['Pretzels'], icon:'🥨' },
+    { name:'Popcorn', slot:'snack', ingredients:['Popcorn'], icon:'🍿' },
+    { name:'Rice Cakes', slot:'snack', ingredients:['Rice'], icon:'🍚' },
+    { name:'Fruit Cup', slot:'snack', ingredients:['Apples','Bananas','Grapes'], icon:'🍇' },
+    { name:'Edamame', slot:'snack', ingredients:['Edamame'], icon:'🌱' },
 ];
 
 // ========== SMART MEAL SUGGESTIONS ==========
@@ -1168,7 +1185,9 @@ function getAvailableIngredients() {
 
 function getRecipeSuggestions(slot) {
     const available = getAvailableIngredients();
-    const slotRecipes = RECIPES.filter(r => r.slot === slot);
+    // snack1 and snack2 both use the 'snack' slot
+    const lookupSlot = (slot === 'snack1' || slot === 'snack2') ? 'snack' : slot;
+    const slotRecipes = RECIPES.filter(r => r.slot === lookupSlot);
 
     return slotRecipes.map(recipe => {
         const matched = recipe.ingredients.filter(ing => 
@@ -1187,7 +1206,15 @@ function renderMealForm(extra) {
     const current = extra?.currentMeal || '';
     const slot = extra?.slot || 'dinner';
     const dayLabel = extra?.dayLabel || '';
-    const icons = { breakfast:'🌅', lunch:'☀️', dinner:'🌙' };
+
+    const slotLabels = {
+        breakfast: { label: 'Breakfast', icon: '🌅' },
+        snack1:    { label: 'AM Snack',  icon: '🍎' },
+        lunch:     { label: 'Lunch',     icon: '☀️' },
+        snack2:    { label: 'PM Snack',  icon: '🥨' },
+        dinner:    { label: 'Dinner',    icon: '🌙' },
+    };
+    const { label: slotLabel, icon: slotIcon } = slotLabels[slot] || { label: slot, icon: '🍽️' };
 
     const suggestions = getRecipeSuggestions(slot);
 
@@ -1218,20 +1245,33 @@ function renderMealForm(extra) {
     }
 
     // Also show all quick picks as simple chips
-    const allRecipeNames = RECIPES.filter(r => r.slot === slot).map(r => r.name);
+    const lookupSlot2 = (slot === 'snack1' || slot === 'snack2') ? 'snack' : slot;
+    const allRecipeNames = RECIPES.filter(r => r.slot === lookupSlot2).map(r => r.name);
     const chips = allRecipeNames.map(s =>
-        `<div class="form-chip ${s===current?'selected':''}" onclick="this.closest('.modal-body').querySelector('#meal-title').value='${s}'; selectFreq(this)">${s}</div>`
+        `<div class="form-chip ${s===current?'selected':''}" onclick="this.closest('.modal-body').querySelector('#meal-title').value='${s}'; selectFreq(this)">${getMealIcon(s, '')} ${s}</div>`
     ).join('');
+
+    // If no options exist, show an Add to Grocery button
+    const noOptionsHtml = allRecipeNames.length === 0 ? `
+        <div style="text-align:center; padding: 12px 0; color: var(--text-muted); font-size:13px;">
+            No ${slotLabel.toLowerCase()} options in your grocery list yet.
+        </div>
+        <button class="btn-primary" style="width:100%; margin-top:4px;"
+            onclick="openModal('grocery',{prefill:''});">
+            + Add Snack Items to Grocery List
+        </button>
+    ` : '';
 
     return `
         <div class="form-section">
-            <span class="form-section-label">${icons[slot] || '🍽️'} ${slot.charAt(0).toUpperCase()+slot.slice(1)} — ${dayLabel}</span>
-            <input class="form-input" id="meal-title" placeholder="What's for ${slot}?" value="${current}" autofocus>
+            <span class="form-section-label">${slotIcon} ${slotLabel} — ${dayLabel}</span>
+            <input class="form-input" id="meal-title" placeholder="What's for ${slotLabel.toLowerCase()}?" value="${current}" autofocus>
         </div>
         ${suggestionsHtml}
         <div class="form-section">
             <span class="form-section-label">All Options</span>
             <div class="form-chips">${chips}</div>
+            ${noOptionsHtml}
         </div>
         <div class="form-section">
             <span class="form-section-label">Notes</span>
