@@ -1,0 +1,11 @@
+{
+  "name": "big-calendar-preview",
+  "version": "1.0.0",
+  "description": "Preview environment for Homi app",
+  "scripts": {
+    "dev": "npx -y serve preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

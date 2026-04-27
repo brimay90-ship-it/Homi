@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homi — Family Calendar Preview</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="orientation-toggle">
+        <button class="orient-btn active" onclick="setOrientation('portrait')">📱 Portrait</button>
+        <button class="orient-btn" onclick="setOrientation('landscape')">📱 Landscape</button>
+    </div>
+    <div class="ipad-frame" id="ipadFrame">
+        <div class="ipad-screen" id="app">
+            <!-- Lock Screen -->
+            <div class="screen lock-screen active" id="lockScreen">
+                <div class="lock-bg"></div>
+                <div class="lock-content">
+                    <div class="lock-header-row">
+                        <div class="lock-brand">
+                            <div class="lock-logo">🏠</div>
+                            <h1 class="lock-title">Homi</h1>
+                        </div>
+                        <div class="lock-clock">
+                            <div class="lock-time" id="lockTime"></div>
+                            <div class="lock-date" id="lockDate"></div>
+                        </div>
+                    </div>
+                    <p class="lock-subtitle" style="margin-top: 40px;">Who's checking in?</p>
+                    <div class="avatar-row" id="avatarRow"></div>
+                    <div class="pin-section hidden" id="pinSection">
+                        <div class="pin-dots" id="pinDots">
+                            <span class="dot"></span><span class="dot"></span>
+                            <span class="dot"></span><span class="dot"></span>
+                        </div>
+                        <div class="pin-error hidden" id="pinError">Incorrect PIN</div>
+                        <div class="numpad" id="numpad"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main App -->
+            <div class="screen main-app" id="mainApp">
+                <!-- Header -->
+                <header class="header-bar">
+                    <div class="header-left">
+                        <span class="header-logo">🏠</span>
+                        <span class="header-title">Homi</span>
+                    </div>
+                    <div class="header-center">
+                        <div class="weather-pill">
+                            <span class="weather-icon">☀️</span>
+                            <span class="weather-temp">72°</span>
+                        </div>
+                        <div class="header-time" id="headerTime"></div>
+                        <div class="header-date" id="headerDate"></div>
+                    </div>
+                    <div class="header-user" id="headerUser"></div>
+                </header>
+
+                <div class="app-body">
+                    <!-- Side Tab Bar -->
+                    <nav class="side-tabs">
+                        <div class="tab active" data-tab="calendar">
+                            <span class="tab-icon">📅</span>
+                            <span class="tab-label">Calendar</span>
+                        </div>
+                        <div class="tab" data-tab="chores">
+                            <span class="tab-icon">✅</span>
+                            <span class="tab-label">Chores</span>
+                        </div>
+                        <div class="tab" data-tab="meals">
+                            <span class="tab-icon">🍽️</span>
+                            <span class="tab-label">Meals</span>
+                        </div>
+                        <div class="tab" data-tab="grocery">
+                            <span class="tab-icon">🛒</span>
+                            <span class="tab-label">Grocery</span>
+                        </div>
+                        <div class="tab-spacer"></div>
+                        <div class="tab tab-bottom" data-tab="settings">
+                            <span class="tab-icon">⚙️</span>
+                        </div>
+                        <div class="tab tab-bottom" id="logoutBtn">
+                            <span class="tab-icon">🚪</span>
+                        </div>
+                    </nav>
+
+                    <!-- Content Area -->
+                    <main class="content-area">
+                        <!-- Calendar Tab -->
+                        <div class="tab-content active" id="tab-calendar">
+                            <div class="cal-toolbar">
+                                <button class="btn-today" id="btnToday">Today</button>
+                                <button class="btn-nav" id="calPrev">‹</button>
+                                <span class="cal-range" id="calRange"></span>
+                                <button class="btn-nav" id="calNext">›</button>
+                                <div class="view-switcher">
+                                    <button class="view-btn active" data-view="month">Month</button>
+                                    <button class="view-btn" data-view="week">Week</button>
+                                    <button class="view-btn" data-view="day">Day</button>
+                                </div>
+                            </div>
+                            <div class="cal-view" id="calView"></div>
+                            <button class="fab" onclick="openModal('event')">+</button>
+                        </div>
+
+                        <!-- Chores Tab -->
+                        <div class="tab-content" id="tab-chores">
+                            <div class="chores-header">
+                                <div class="progress-card">
+                                    <div class="progress-info">
+                                        <h3>Today's Progress</h3>
+                                        <p id="choreProgress">0 of 0 chores completed</p>
+                                    </div>
+                                    <div class="progress-ring" id="progressRing">
+                                        <svg viewBox="0 0 36 36">
+                                            <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                            <path class="ring-fill" id="ringFill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                        </svg>
+                                        <span class="ring-text" id="ringText">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chore-list" id="choreList"></div>
+                            <button class="fab" onclick="openModal('chore')">+</button>
+                        </div>
+
+                        <!-- Meals Tab -->
+                        <div class="tab-content" id="tab-meals">
+                            <div class="meals-nav">
+                                <button class="btn-nav" id="mealPrev">‹</button>
+                                <span class="meals-range" id="mealsRange"></span>
+                                <button class="btn-nav" id="mealNext">›</button>
+                            </div>
+                            <div class="meals-grid" id="mealsGrid"></div>
+                        </div>
+
+                        <!-- Grocery Tab -->
+                        <div class="tab-content" id="tab-grocery">
+                            <div class="grocery-add">
+                                <button class="cat-btn" id="catBtn" onclick="openModal('grocery')">🥬</button>
+                                <input type="text" placeholder="Add an item..." id="groceryInput">
+                                <button class="add-btn" id="addGroceryBtn">+</button>
+                            </div>
+                            <div class="grocery-list" id="groceryList"></div>
+                        </div>
+                    </main>
+                </div>
+
+                <!-- Modal Overlay -->
+                <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+                    <div class="modal-sheet" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+                            <span class="modal-title" id="modalTitle"></span>
+                            <button class="modal-save" id="modalSave">Add</button>
+                        </div>
+                        <div class="modal-body" id="modalBody"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="frame-label">iPad Pro 11" — Portrait Preview</p>
+    <script src="app.js"></script>
+</body>
+</html>
