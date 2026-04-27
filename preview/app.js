@@ -112,6 +112,13 @@ function selectAvatar(id) {
     document.querySelectorAll('.avatar-item').forEach(el => {
         el.classList.toggle('selected', +el.dataset.id === id);
     });
+    
+    if (selectedAvatar.role !== 'Admin') {
+        currentUser = selectedAvatar;
+        showMainApp();
+        return;
+    }
+
     document.getElementById('pinSection').classList.remove('hidden');
     document.getElementById('pinError').classList.add('hidden');
     updatePinDots();
@@ -165,19 +172,26 @@ function showMainApp() {
     document.getElementById('lockScreen').classList.remove('active');
     document.getElementById('mainApp').classList.add('active');
 
-    const hu = document.getElementById('headerUser');
-    hu.innerHTML = `
-        <div class="header-avatar" style="background:${currentUser.color}22">${currentUser.emoji}</div>
-        <div class="header-user-info">
-            <span class="header-user-name">${currentUser.name}</span>
-            <span class="header-user-role">${currentUser.role}</span>
-        </div>
-    `;
+    const pb = document.getElementById('profileBtn');
+    if (pb) {
+        pb.innerHTML = `
+            <div class="sidebar-avatar" style="background:${currentUser.color}22; font-size: 24px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; cursor: pointer;">${currentUser.emoji}</div>
+        `;
+    }
 
     renderCalendar();
     renderChores();
     renderMeals();
     renderGrocery();
+    fetchWeather(); // Fetch weather when app loads
+
+    // Restrict kids from adding items
+    const fabs = document.querySelectorAll('.fab, .add-btn');
+    if (currentUser.role !== 'Admin') {
+        fabs.forEach(fab => fab.style.display = 'none');
+    } else {
+        fabs.forEach(fab => fab.style.display = 'block');
+    }
 }
 
 function logout() {
@@ -731,13 +745,21 @@ function openModal(type, extra) {
         body.innerHTML = renderGroceryForm(extra?.prefill, extra?.editIdx);
         save.onclick = saveGroceryItem;
         
-        if (isEdit) {
+        if (isEdit && currentUser && currentUser.role === 'Admin') {
             document.querySelector('.modal-cancel').innerHTML = '<span style="color:var(--danger)">Delete Item</span>';
             document.querySelector('.modal-cancel').onclick = () => {
                 GROCERY.splice(extra.editIdx, 1);
                 closeModal();
                 renderGrocery();
             };
+        }
+    }
+
+    // Hide save button and fields for restricted items
+    if (currentUser && currentUser.role !== 'Admin' && (type === 'chore' || type === 'meal')) {
+        const canAdd = false; // Kids can't add chores or meals in this simulation
+        if (!canAdd) {
+            save.style.display = 'none';
         }
     }
 
@@ -1378,4 +1400,109 @@ function saveGroceryItem() {
     
     closeModal();
     renderGrocery();
+}
+
+// ========== WEATHER OVERLAY ==========
+let weatherDataCache = null;
+
+function fetchWeather() {
+    if (!navigator.geolocation) {
+        setWeatherError("Geolocation is not supported by this browser.");
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        
+        // Use Open-Meteo API
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto`;
+        
+        fetch(url).then(res => res.json()).then(data => {
+            weatherDataCache = data;
+            // Update top header weather
+            const topTemp = document.getElementById('weatherTempTop');
+            const topIcon = document.getElementById('weatherIconTop');
+            if (topTemp && data.current_weather) {
+                topTemp.textContent = Math.round(data.current_weather.temperature) + '°';
+                topIcon.textContent = getWeatherEmoji(data.current_weather.weathercode);
+            }
+        }).catch(err => {
+            console.error("Weather fetch failed", err);
+            setWeatherError("Failed to fetch weather data.");
+        });
+    }, err => {
+        setWeatherError("Location access denied.");
+    });
+}
+
+function setWeatherError(msg) {
+    const topTemp = document.getElementById('weatherTempTop');
+    if (topTemp) topTemp.textContent = '--°';
+    const wb = document.getElementById('weatherBody');
+    if (wb) wb.innerHTML = `<div style="color:var(--danger);">${msg}</div>`;
+}
+
+function openWeatherModal() {
+    const modal = document.getElementById('weatherModal');
+    if (modal) modal.classList.add('active');
+    
+    const body = document.getElementById('weatherBody');
+    if (!weatherDataCache) {
+        body.innerHTML = '<div>Fetching local weather...</div>';
+        fetchWeather(); // Try again
+        return;
+    }
+    
+    // Render Weather Data
+    const c = weatherDataCache.current_weather;
+    const d = weatherDataCache.daily;
+    
+    let html = `
+        <div style="margin-bottom: 24px;">
+            <div style="font-size: 64px;">${getWeatherEmoji(c.weathercode)}</div>
+            <div style="font-size: 48px; font-weight: 700;">${Math.round(c.temperature)}°F</div>
+            <div style="font-size: 14px; color: var(--text-muted); text-transform: uppercase;">Current Weather</div>
+        </div>
+        <div style="text-align: left;">
+            <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-muted);">Upcoming Week</h4>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+    `;
+    
+    for (let i = 0; i < 7; i++) {
+        if (!d.time[i]) break;
+        const dateObj = new Date(d.time[i] + 'T12:00:00'); // append time to avoid timezone shifts
+        const dayStr = i === 0 ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+        const icon = getWeatherEmoji(d.weathercode[i]);
+        const max = Math.round(d.temperature_2m_max[i]);
+        const min = Math.round(d.temperature_2m_min[i]);
+        
+        html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 12px; background:var(--bg-secondary); border-radius: 8px;">
+                <span style="font-weight: 600; width: 60px;">${dayStr}</span>
+                <span style="font-size: 20px;">${icon}</span>
+                <span style="font-size: 14px;"><span style="color:var(--text-muted);">${min}°</span> / <span style="font-weight:600;">${max}°</span></span>
+            </div>
+        `;
+    }
+    
+    html += `</div></div>`;
+    body.innerHTML = html;
+}
+
+function closeWeatherModal() {
+    const modal = document.getElementById('weatherModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function getWeatherEmoji(code) {
+    // Open-Meteo WMO codes
+    if (code === 0) return '☀️'; // Clear sky
+    if (code === 1 || code === 2 || code === 3) return '⛅'; // Partly cloudy
+    if (code >= 45 && code <= 48) return '🌫️'; // Fog
+    if (code >= 51 && code <= 67) return '🌧️'; // Drizzle / Rain
+    if (code >= 71 && code <= 77) return '❄️'; // Snow
+    if (code >= 80 && code <= 82) return '🌧️'; // Showers
+    if (code >= 85 && code <= 86) return '🌨️'; // Snow showers
+    if (code >= 95) return '⛈️'; // Thunderstorm
+    return '🌡️';
 }

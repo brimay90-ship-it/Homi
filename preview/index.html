@@ -51,14 +51,13 @@
                         <span class="header-title">Homi</span>
                     </div>
                     <div class="header-center">
-                        <div class="weather-pill">
-                            <span class="weather-icon">☀️</span>
-                            <span class="weather-temp">72°</span>
+                        <div class="weather-pill" onclick="openWeatherModal()">
+                            <span class="weather-icon" id="weatherIconTop">☀️</span>
+                            <span class="weather-temp" id="weatherTempTop">--°</span>
                         </div>
                         <div class="header-time" id="headerTime"></div>
                         <div class="header-date" id="headerDate"></div>
                     </div>
-                    <div class="header-user" id="headerUser"></div>
                 </header>
 
                 <div class="app-body">
@@ -84,8 +83,8 @@
                         <div class="tab tab-bottom" data-tab="settings">
                             <span class="tab-icon">⚙️</span>
                         </div>
-                        <div class="tab tab-bottom" id="logoutBtn">
-                            <span class="tab-icon">🚪</span>
+                        <div class="sidebar-user" id="profileBtn" onclick="logout()">
+                            <!-- Populated by JS -->
                         </div>
                     </nav>
 
@@ -158,13 +157,27 @@
 
                 <!-- Modal Overlay -->
                 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
-                    <div class="modal-sheet" onclick="event.stopPropagation()">
+                    <div class="modal-sheet" id="modal" onclick="event.stopPropagation()">
                         <div class="modal-header">
                             <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-                            <span class="modal-title" id="modalTitle"></span>
-                            <button class="modal-save" id="modalSave">Add</button>
+                            <h2 class="modal-title" id="modalTitle">Add Event</h2>
+                            <button class="modal-save" id="modalSave">Save</button>
                         </div>
                         <div class="modal-body" id="modalBody"></div>
+                    </div>
+                </div>
+
+                <!-- Weather Modal Overlay -->
+                <div class="modal-overlay" id="weatherModal" onclick="closeWeatherModal()">
+                    <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height: 60%;">
+                        <div class="modal-header">
+                            <button class="modal-cancel" onclick="closeWeatherModal()">Close</button>
+                            <h2 class="modal-title">Weather Forecast</h2>
+                            <div style="width: 50px;"></div> <!-- spacer -->
+                        </div>
+                        <div class="modal-body" id="weatherBody" style="text-align: center; padding: 20px;">
+                            <div id="weatherLoading">Fetching local weather...</div>
+                        </div>
                     </div>
                 </div>
             </div>
