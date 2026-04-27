@@ -38,13 +38,13 @@ const CHORES = [
 ];
 
 const MEALS = {
-    0:{ breakfast:'Pancakes', lunch:'Turkey wrap', dinner:'Pasta night' },
-    1:{ breakfast:'Cereal', lunch:'', dinner:'Tacos' },
-    2:{ breakfast:'Eggs & toast', lunch:'Salad', dinner:'' },
-    3:{ breakfast:'', lunch:'Soup', dinner:'Stir fry' },
-    4:{ breakfast:'Waffles', lunch:'', dinner:'Pizza' },
-    5:{ breakfast:'', lunch:'Sandwiches', dinner:'Grilled chicken' },
-    6:{ breakfast:'French toast', lunch:'Leftovers', dinner:'BBQ' },
+    0:{ breakfast:'Pancakes', snack1:'Yogurt & Berries', lunch:'Turkey wrap', snack2:'Trail Mix', dinner:'Pasta night' },
+    1:{ breakfast:'Cereal', snack1:'', lunch:'', snack2:'Apple slices', dinner:'Tacos' },
+    2:{ breakfast:'Eggs & toast', snack1:'String cheese', lunch:'Salad', snack2:'', dinner:'' },
+    3:{ breakfast:'', snack1:'', lunch:'Soup', snack2:'Pretzels', dinner:'Stir fry' },
+    4:{ breakfast:'Waffles', snack1:'Smoothie', lunch:'', snack2:'Carrot sticks', dinner:'Pizza' },
+    5:{ breakfast:'', snack1:'', lunch:'Sandwiches', snack2:'', dinner:'Grilled chicken' },
+    6:{ breakfast:'French toast', snack1:'', lunch:'Leftovers', snack2:'Hummus', dinner:'BBQ' },
 };
 
 const GROCERY = [
@@ -474,7 +474,9 @@ function renderMeals() {
     const today = new Date();
     const types = [
         { key:'breakfast', label:'Breakfast', icon:'🌅' },
+        { key:'snack1', label:'AM Snack', icon:'🍎' },
         { key:'lunch', label:'Lunch', icon:'☀️' },
+        { key:'snack2', label:'PM Snack', icon:'🥨' },
         { key:'dinner', label:'Dinner', icon:'🌙' },
     ];
 
@@ -521,7 +523,7 @@ function generateShoppingList() {
         const d = new Date(ws); d.setDate(d.getDate() + i);
         const dayMeals = MEALS[d.getDay()] || {};
         
-        ['breakfast', 'lunch', 'dinner'].forEach(slot => {
+        ['breakfast', 'snack1', 'lunch', 'snack2', 'dinner'].forEach(slot => {
             const mealName = dayMeals[slot];
             if (!mealName) return;
             
