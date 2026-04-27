@@ -267,8 +267,9 @@ body {
 
 /* =================== CALENDAR =================== */
 .cal-toolbar {
-    display:flex; align-items:center; gap:10px;
+    display: flex; align-items: center; gap: 6px;
     padding: 8px 0; margin-bottom: 8px;
+    flex-wrap: nowrap; overflow: hidden;
 }
 .btn-today {
     background: rgba(91,127,255,0.1); color: var(--primary);
@@ -287,19 +288,25 @@ body {
 }
 .btn-nav:hover { background: var(--bg-secondary); transform: scale(1.08); color: var(--primary); }
 .btn-nav:active { transform: scale(0.95); }
-.cal-range { font-size: 15px; font-weight: 600; min-width: 140px; text-align:center; }
+.cal-range {
+    font-size: 14px; font-weight: 600;
+    min-width: 100px; text-align: center;
+    flex: 1; /* grow to fill available space */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .view-switcher {
-    display:flex; gap:2px; margin-left:auto;
-    background: var(--bg-tertiary); padding:3px; border-radius: 10px;
+    display: flex; gap: 2px; flex-shrink: 0;
+    background: var(--bg-tertiary); padding: 3px; border-radius: 10px;
 }
 .view-btn {
-    padding: 5px 12px; border:none; border-radius: 7px;
-    font-size: 11px; font-weight: 500; cursor:pointer;
-    background:transparent; color: var(--text-secondary);
+    padding: 5px 10px; border: none; border-radius: 7px;
+    font-size: 11px; font-weight: 500; cursor: pointer;
+    background: transparent; color: var(--text-secondary);
     font-family: var(--font); transition: all 0.2s;
+    white-space: nowrap;
 }
-.view-btn.active { background: var(--primary); color:#fff; }
+.view-btn.active { background: var(--primary); color: #fff; }
 
 /* Month Grid — Rich event view */
 .month-grid {
