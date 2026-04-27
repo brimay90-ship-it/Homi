@@ -258,10 +258,12 @@ body {
 .tab-bottom:hover { opacity:0.8; }
 
 /* Content */
-.content-area { flex:1; overflow-y:auto; padding: 12px; position:relative; display:flex; flex-direction:column; }
-.tab-content { display:none; height:100%; flex-direction:column; }
-.tab-content.active { display:flex; flex:1; }
-.cal-view { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.content-area { flex:1; overflow:hidden; padding: 12px; position:relative; display:flex; flex-direction:column; }
+.tab-content { display:none; height:100%; flex-direction:column; overflow:hidden; }
+.tab-content.active { display:flex; flex:1; overflow:hidden; }
+.cal-view { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+/* Non-calendar tabs scroll themselves */
+#tab-chores, #tab-meals, #tab-grocery { overflow-y: auto; }
 
 /* =================== CALENDAR =================== */
 .cal-toolbar {
@@ -363,7 +365,7 @@ body {
 /* Time Grid Layout */
 .time-grid-container {
     display: flex; flex: 1; overflow-y: auto; overflow-x: hidden;
-    position: relative; padding-bottom: 20px;
+    position: relative; padding-bottom: 20px; min-height: 0;
 }
 .time-labels {
     width: 50px; flex-shrink: 0; display: flex; flex-direction: column;

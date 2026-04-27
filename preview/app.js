@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClocks();
     setInterval(updateClocks, 60000);
     setupTabs();
-    setupCalendarControls();
+    // Note: setupCalendarControls() is called in showMainApp() after login
 });
 
 // ========== CLOCK ==========
@@ -180,6 +180,7 @@ function showMainApp() {
     }
 
     renderCalendar();
+    setupCalendarControls(); // Attach after DOM is visible
     renderChores();
     renderMeals();
     renderGrocery();
@@ -223,16 +224,19 @@ function setupTabs() {
 // ========== CALENDAR ==========
 function setupCalendarControls() {
     document.querySelectorAll('.view-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.onclick = () => {
             calView = btn.dataset.view;
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             renderCalendar();
-        });
+        };
     });
-    document.getElementById('calPrev').addEventListener('click', () => { navCal(-1); });
-    document.getElementById('calNext').addEventListener('click', () => { navCal(1); });
-    document.getElementById('btnToday').addEventListener('click', () => { calDate = new Date(); renderCalendar(); });
+    const prevBtn = document.getElementById('calPrev');
+    const nextBtn = document.getElementById('calNext');
+    const todayBtn = document.getElementById('btnToday');
+    if (prevBtn) prevBtn.onclick = () => navCal(-1);
+    if (nextBtn) nextBtn.onclick = () => navCal(1);
+    if (todayBtn) todayBtn.onclick = () => { calDate = new Date(); renderCalendar(); };
 }
 
 function navCal(dir) {
